@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宝宝专属抽奖机</title>
+<style>
+/* ========== 全局样式 ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --text: #eee;
+  --gold: #f0c060;
+  --accent: #e94560;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  background:
+    linear-gradient(160deg, rgba(15,12,41,0.75), rgba(26,26,46,0.7) 30%, rgba(22,33,62,0.7) 60%, rgba(26,26,46,0.75) 100%),
+    url('背景图片/微信图片_20260513221514_174_95.jpg') center / cover no-repeat fixed;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  color: var(--text);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 背景装饰 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse at 15% 25%, rgba(233, 68, 96, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 75%, rgba(102, 126, 234, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(240, 192, 96, 0.03) 0%, transparent 60%),
+    radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(2px 2px at 30% 60%, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(2px 2px at 70% 40%, rgba(255,255,255,0.25), transparent),
+    radial-gradient(1px 1px at 90% 70%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(2px 2px at 15% 80%, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1px 1px at 60% 30%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(2px 2px at 85% 15%, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1px 1px at 40% 85%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(2px 2px at 25% 45%, rgba(255,255,255,0.15), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 浮动光晕 */
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(233,68,96,0.04), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: floatBg 12s ease-in-out infinite;
+}
+
+@keyframes floatBg {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(100px, 50px); }
+  50% { transform: translate(200px, -30px); }
+  75% { transform: translate(50px, -80px); }
+}
+
+/* ========== 主容器 ========== */
+.main-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+}
+
+.title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #f7971e, #ffd200, #f7971e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #888;
+  margin-bottom: 25px;
+}
+
+/* ========== 彩蛋网格 ========== */
+.egg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+@media (min-width: 420px) {
+  .egg-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 600px) {
+  .egg-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ========== 单个彩蛋 ========== */
+.egg-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.egg {
+  width: 80px;
+  height: 100px;
+  border-radius: 50% 50% 45% 45%;
+  position: relative;
+  cursor: default;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              box-shadow 0.35s, opacity 0.6s, filter 0.35s;
+  box-shadow:
+    inset -8px -12px 15px rgba(0,0,0,0.25),
+    inset 8px 8px 15px rgba(255,255,255,0.2),
+    0 6px 20px rgba(0,0,0,0.4);
+}
+
+/* 蛋的高光 */
+.egg::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 18%;
+  width: 28%;
+  height: 22%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.6), transparent);
+  border-radius: 50%;
+  transform: rotate(-20deg);
+  transition: opacity 0.3s;
+}
+
+/* 可选蛋 */
+.egg.available {
+  cursor: pointer;
+}
+
+.egg.available:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow:
+    inset -8px -12px 15px rgba(0,0,0,0.25),
+    inset 8px 8px 15px rgba(255,255,255,0.2),
+    0 12px 30px rgba(0,0,0,0.5);
+}
+
+/* 选中蛋 - 逐级强化 */
+.egg.selected-l1 {
+  transform: scale(1.08);
+  filter: brightness(0.9) saturate(1.2);
+  box-shadow:
+    inset -10px -15px 18px rgba(0,0,0,0.35),
+    inset 10px 10px 18px rgba(255,255,255,0.15),
+    0 0 20px var(--glow-color, rgba(255,255,255,0.3)),
+    0 8px 25px rgba(0,0,0,0.5);
+  animation: selectedPulse 1.5s ease-in-out infinite;
+}
+
+.egg.selected-l2 {
+  transform: scale(1.13);
+  filter: brightness(0.8) saturate(1.4);
+  box-shadow:
+    inset -12px -18px 22px rgba(0,0,0,0.4),
+    inset 12px 12px 22px rgba(255,255,255,0.1),
+    0 0 30px var(--glow-color, rgba(255,255,255,0.4)),
+    0 0 60px var(--glow-color, rgba(255,255,255,0.15)),
+    0 10px 30px rgba(0,0,0,0.55);
+  animation: selectedPulse 1s ease-in-out infinite;
+}
+
+.egg.selected-l3 {
+  transform: scale(1.18);
+  filter: brightness(0.7) saturate(1.6);
+  box-shadow:
+    inset -14px -20px 25px rgba(0,0,0,0.45),
+    inset 14px 14px 25px rgba(255,255,255,0.08),
+    0 0 40px var(--glow-color, rgba(255,255,255,0.5)),
+    0 0 80px var(--glow-color, rgba(255,255,255,0.2)),
+    0 12px 35px rgba(0,0,0,0.6);
+  animation: selectedPulse 0.6s ease-in-out infinite;
+}
+
+.egg.selected-l3::after { opacity: 0.4; }
+
+@keyframes selectedPulse {
+  0%, 100% { transform: scale(var(--base-scale, 1)); }
+  50% { transform: scale(calc(var(--base-scale, 1) * 1.03)); }
+}
+
+.egg.selected-l1 { --base-scale: 1.08; }
+.egg.selected-l2 { --base-scale: 1.13; }
+.egg.selected-l3 { --base-scale: 1.18; }
+
+/* 即将爆炸的震动 */
+.egg.about-to-burst {
+  animation: aboutToBurst 0.2s ease-in-out infinite;
+}
+
+@keyframes aboutToBurst {
+  0%, 100% { transform: scale(1.18) rotate(0deg); }
+  25% { transform: scale(1.19) rotate(1deg); }
+  50% { transform: scale(1.18) rotate(0deg); }
+  75% { transform: scale(1.19) rotate(-1deg); }
+}
+
+/* 火花粒子 */
+.spark {
+  position: absolute;
+  width: 4px; height: 4px;
+  background: var(--glow-color, gold);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: sparkFly 0.8s ease-out forwards;
+}
+
+@keyframes sparkFly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+}
+
+.egg.cracked {
+  opacity: 0.35;
+  transform: scale(0.85);
+  filter: grayscale(0.6);
+}
+
+.egg.breaking {
+  animation: eggBreak 0.8s ease-out forwards;
+}
+
+.egg-label {
+  font-size: 0.75rem;
+  color: #aaa;
+  text-align: center;
+  transition: color 0.3s;
+}
+
+.egg-wrapper.has-selection .egg-label {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+/* ========== 彩蛋动画 ========== */
+@keyframes eggBreak {
+  0% { transform: scale(1.18); opacity: 1; filter: none; }
+  20% { transform: scale(1.35); }
+  60% { transform: scale(1.45); opacity: 0.5; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-block;
+  padding: 14px 36px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.btn-tap {
+  display: block;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #e94560, #c23152);
+  box-shadow: 0 6px 25px rgba(233, 68, 96, 0.4);
+  font-size: 1.3rem;
+  padding: 16px 50px;
+  animation: pulse 2s infinite;
+}
+
+.btn-tap:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 35px rgba(233, 68, 96, 0.5);
+}
+
+.btn-tap:active {
+  transform: scale(0.96);
+}
+
+.btn-tap:disabled {
+  background: #555;
+  box-shadow: none;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.btn-tap.has-selection {
+  background: linear-gradient(135deg, #f7971e, #e94560);
+  box-shadow: 0 6px 35px rgba(247, 151, 30, 0.5);
+  animation: pulseStrong 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 6px 25px rgba(233, 68, 96, 0.4); }
+  50% { box-shadow: 0 6px 40px rgba(233, 68, 96, 0.7); }
+}
+
+@keyframes pulseStrong {
+  0%, 100% { box-shadow: 0 6px 30px rgba(247, 151, 30, 0.4); }
+  50% { box-shadow: 0 6px 55px rgba(247, 151, 30, 0.75); }
+}
+
+.btn-choice {
+  padding: 12px 28px;
+  margin: 5px;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.btn-choice:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-close {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 8px 24px;
+}
+
+.btn-small {
+  padding: 8px 18px;
+  font-size: 0.9rem;
+}
+
+.btn-back {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #f7971e, #ffd200);
+  color: #1a1a2e;
+}
+
+.btn-refresh {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+.btn-refresh:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* ========== 弹窗遮罩 ========== */
+.overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========== 奖品展示弹窗 ========== */
+.prize-modal {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.prize-image {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 15px;
+  margin: 15px auto;
+  display: block;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  border: 3px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.prize-image:hover {
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.prize-image.placeholder {
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 0.9rem;
+  cursor: default;
+}
+
+/* 图片放大遮罩 */
+.image-zoom-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.92);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 300;
+  cursor: pointer;
+  animation: fadeIn 0.2s;
+}
+
+.image-zoom-overlay img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.image-hint {
+  position: absolute;
+  bottom: 20px;
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.prize-name {
+  font-size: 1.6rem;
+  margin: 15px 0;
+}
+
+.prize-name.font-beautiful {
+  font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+  background: linear-gradient(135deg, #f7971e, #ffd200, #f7971e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.prize-name.font-serious {
+  font-family: 'STSong', 'SimSun', '宋体', serif;
+  color: #ccc;
+  letter-spacing: 4px;
+}
+
+.prize-name.font-normal {
+  font-weight: bold;
+  color: #fff;
+}
+
+/* ========== 特殊交互通用样式 ========== */
+.special-modal {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 460px;
+  width: 90%;
+  text-align: center;
+  animation: slideUp 0.4s ease-out;
+}
+
+.special-title {
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+  color: var(--gold);
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.response-msg {
+  font-size: 1.3rem;
+  color: #e94560;
+  margin: 20px 0;
+  animation: bounceIn 0.5s;
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 摆poss样式 ========== */
+.pose-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.pose-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pose-card:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: var(--gold);
+}
+
+.pose-card.selected {
+  border-color: var(--gold);
+  background: rgba(240,192,96,0.1);
+  box-shadow: 0 0 20px rgba(240,192,96,0.2);
+}
+
+.pose-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.pose-card-icon {
+  font-size: 1.5rem;
+}
+
+.pose-card-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.pose-card-category {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+/* ========== POSE详情弹窗 ========== */
+.pose-detail {
+  text-align: left;
+  line-height: 1.8;
+}
+
+.pose-detail h3 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+}
+
+.pose-detail .label {
+  color: var(--gold);
+  font-weight: bold;
+  margin-top: 12px;
+  display: block;
+}
+
+/* ========== 三行情诗样式 ========== */
+.poem-write-area {
+  width: 100%;
+  min-height: 80px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  color: #fff;
+  padding: 12px;
+  font-size: 1rem;
+  resize: vertical;
+  margin: 8px 0;
+  font-family: inherit;
+}
+
+.poem-write-area:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.poem-preview {
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 15px 0;
+  white-space: pre-line;
+  line-height: 2;
+  font-size: 1.1rem;
+  text-align: left;
+}
+
+.poem-blank {
+  display: inline-block;
+  border-bottom: 2px dashed var(--gold);
+  min-width: 40px;
+  padding: 0 4px;
+  color: var(--gold);
+}
+
+.poem-input-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.poem-fill-input {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  width: 120px;
+}
+
+.poem-fill-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+/* ========== 关闭按钮横条 ========== */
+.close-bar {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ========== 进度条 ========== */
+.progress {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.progress span {
+  color: var(--gold);
+}
+
+/* ========== 粒子效果 ========== */
+.particles {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: particleFall 1.5s ease-out forwards;
+}
+
+@keyframes particleFall {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* ========== 提示文字 ========== */
+.hint-text {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 380px) {
+  .egg { width: 65px; height: 82px; }
+  .title { font-size: 1.5rem; }
+  .btn-tap { font-size: 1rem; padding: 12px 36px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== 主界面 ========== -->
+<div class="main-container" id="mainContainer">
+  <div class="title">🎁 宝宝专属抽奖机 🎁</div>
+  <div class="subtitle">点击彩蛋选中，再敲一下～</div>
+
+  <div class="progress">
+    剩余彩蛋：<span id="remainCount">10</span> / 10
+  </div>
+
+  <div class="egg-grid" id="eggGrid"></div>
+
+  <button class="btn btn-tap" id="btnTap" onclick="crackSelectedEgg()">
+    ✨ 像敲宝宝一样轻轻敲一下 ✨
+  </button>
+  <div class="hint-text" style="text-align:center;" id="hintText">
+    先点击一个彩蛋选中它，然后按此按钮敲碎
+  </div>
+</div>
+
+<!-- ========== 弹窗容器（动态生成） ========== -->
+<div id="overlayContainer"></div>
+
+<!-- ========== 粒子容器 ========== -->
+<div class="particles" id="particlesContainer"></div>
+
+<!-- ========== 音频元素 ========== -->
+<audio id="audioPrompt" preload="auto"></audio>
+<audio id="audioBgMusic" preload="auto" loop></audio>
+<audio id="audioAmbient" preload="auto" loop></audio>
+
+<!-- ========== 加载配置 ========== -->
+<script src="config.js"></script>
+
+<script>
+// ============================================================
+// 音频管理器
+// ============================================================
+const AudioManager = {
+  promptAudio: document.getElementById('audioPrompt'),
+  bgMusicEl: document.getElementById('audioBgMusic'),
+  ambientEl: document.getElementById('audioAmbient'),
+  promptEndedCallback: null,
+
+  // ===== 整体背景音乐 =====
+
+  startAmbient(src) {
+    if (!src) return;
+    this.ambientEl.src = src;
+    this.ambientEl.loop = true;
+    this.ambientEl.volume = 0.5;
+    this.ambientEl.load();
+
+    // 等音频数据就绪再尝试播放，避免因数据不足误判为自动播放被拦截
+    if (this.ambientEl.readyState >= 2) {
+      this._tryPlayAmbient();
+    } else {
+      this.ambientEl.addEventListener('canplay', () => this._tryPlayAmbient(), { once: true });
+    }
+  },
+
+  // 仅在音频数据就绪后调用；失败才是真·自动播放被拦截
+  _tryPlayAmbient() {
+    const p = this.ambientEl.play();
+    if (p) p.catch(() => {
+      const resume = () => {
+        this.ambientEl.play().catch(() => {});
+        document.removeEventListener('click', resume);
+        document.removeEventListener('touchstart', resume);
+        document.removeEventListener('keydown', resume);
+      };
+      document.addEventListener('click', resume);
+      document.addEventListener('touchstart', resume);
+      document.addEventListener('keydown', resume);
+    });
+  },
+
+  pauseAmbient() {
+    this.ambientEl.pause();
+  },
+
+  resumeAmbient() {
+    if (this.ambientEl.src && this.ambientEl.paused) {
+      this.ambientEl.play().catch(() => {});
+    }
+  },
+
+  stopAmbient() {
+    this.ambientEl.pause();
+    this.ambientEl.currentTime = 0;
+  },
+
+  // ===== 提示音 + 每蛋背景音乐 =====
+
+  // 提示音和每蛋背景音乐同时播放；提示音播放期间背景音乐低音量（不盖过人声）
+  // 提示音结束后，背景音乐平滑过渡到正常音量继续播放
+  playPrompt(src, loop = false, bgSrc = null, onEnd = null) {
+    this._stopPerEggAudio();
+    if (!src) {
+      if (onEnd) onEnd();
+      return;
+    }
+    this.promptEndedCallback = onEnd;
+    this.promptAudio.src = src;
+    this.promptAudio.loop = loop;
+    this.promptAudio.volume = 1.0;
+
+    // 每蛋背景音乐同步启动，低音量（12%），不盖过提示人声
+    if (bgSrc) {
+      this.bgMusicEl.src = bgSrc;
+      this.bgMusicEl.loop = true;
+      this.bgMusicEl.volume = 0.12;
+      this.bgMusicEl.play().catch(() => {});
+    }
+
+    // 非循环提示音：播放结束后平滑拉高背景音乐音量
+    if (!loop) {
+      this.promptAudio.onended = () => {
+        this.promptAudio.onended = null;
+        this._fadeBgToFull();
+        if (this.promptEndedCallback) {
+          const cb = this.promptEndedCallback;
+          this.promptEndedCallback = null;
+          cb();
+        }
+      };
+    }
+
+    this.promptAudio.play().catch(() => {});
+  },
+
+  // 停止提示音，同时将背景音乐拉回正常音量
+  stopPrompt() {
+    this.promptAudio.pause();
+    this.promptAudio.currentTime = 0;
+    this.promptAudio.loop = false;
+    this.promptAudio.onended = null;
+    this.promptEndedCallback = null;
+    this._fadeBgToFull();
+  },
+
+  // 让循环提示音播完当前这一遍后自然停止（不立即切断人声）
+  finishPromptLoop() {
+    if (!this.promptAudio.loop) return; // 本就不循环，无需处理
+    this.promptAudio.loop = false;
+    this.promptAudio.onended = () => {
+      this.promptAudio.onended = null;
+      this._fadeBgToFull();
+    };
+  },
+
+  // 平滑过渡：低音量 → 正常音量
+  _fadeBgToFull() {
+    if (this.bgMusicEl.paused || this.bgMusicEl.volume >= 0.95) return;
+    const startVol = this.bgMusicEl.volume;
+    const steps = 8;
+    const stepMs = 60;
+    let step = 0;
+    const fade = setInterval(() => {
+      step++;
+      this.bgMusicEl.volume = startVol + (1.0 - startVol) * (step / steps);
+      if (step >= steps) { clearInterval(fade); this.bgMusicEl.volume = 1.0; }
+    }, stepMs);
+  },
+
+  playBgMusic(src) {
+    if (!src) return;
+    this.bgMusicEl.src = src;
+    this.bgMusicEl.loop = true;
+    this.bgMusicEl.volume = 1.0;
+    this.bgMusicEl.play().catch(() => {});
+  },
+
+  // 仅停止每蛋音频（不影响整体背景音乐）
+  _stopPerEggAudio() {
+    this.promptAudio.pause();
+    this.promptAudio.currentTime = 0;
+    this.promptAudio.loop = false;
+    this.promptAudio.onended = null;
+    this.promptEndedCallback = null;
+    this.bgMusicEl.pause();
+    this.bgMusicEl.currentTime = 0;
+    this.bgMusicEl.volume = 1.0;
+  },
+
+  // 停止所有音频（每蛋 + 整体背景音乐）
+  stopAll() {
+    this._stopPerEggAudio();
+    this.stopAmbient();
+  }
+};
+
+// ============================================================
+// 游戏状态管理
+// ============================================================
+const GameState = {
+  remainingEggs: [],
+  crackedEggs: [],
+  isProcessing: false,
+  currentEgg: null,
+  selectedEggIndex: null,   // 当前选中的蛋索引
+  selectionLevel: 0,        // 选中等级 (0=未选中, 1-3=逐级)
+  sparkInterval: null,      // 火花定时器
+
+  init() {
+    this.remainingEggs = CONFIG.eggs.map((_, i) => i);
+    this.crackedEggs = [];
+    this.isProcessing = false;
+    this.currentEgg = null;
+    this.selectedEggIndex = null;
+    this.selectionLevel = 0;
+    this.clearSparks();
+  },
+
+  getRemainingCount() {
+    return this.remainingEggs.length;
+  },
+
+  clearSparks() {
+    if (this.sparkInterval) { clearInterval(this.sparkInterval); this.sparkInterval = null; }
+  },
+
+  selectEgg(index) {
+    if (this.isProcessing) return;
+    if (!this.remainingEggs.includes(index)) return;
+
+    this.clearSparks();
+
+    if (this.selectedEggIndex === index) {
+      // 同一个蛋：升级
+      this.selectionLevel = Math.min(this.selectionLevel + 1, 3);
+    } else {
+      // 不同的蛋：切换
+      this.selectedEggIndex = index;
+      this.selectionLevel = 1;
+    }
+
+    this.updateSelectionUI(index);
+  },
+
+  updateSelectionUI(index) {
+    // 清除所有选中状态
+    document.querySelectorAll('.egg').forEach(el => {
+      el.classList.remove('selected-l1', 'selected-l2', 'selected-l3', 'about-to-burst');
+      el.style.setProperty('--glow-color', '');
+    });
+    document.querySelectorAll('.egg-wrapper').forEach(w => w.classList.remove('has-selection'));
+
+    const eggEl = document.getElementById('egg-' + index);
+    const wrapper = eggEl?.parentElement;
+    if (!eggEl || !wrapper) return;
+
+    const egg = CONFIG.eggs[index];
+    const level = this.selectionLevel;
+
+    eggEl.classList.add('selected-l' + level);
+    eggEl.style.setProperty('--glow-color', egg.color);
+    wrapper.classList.add('has-selection');
+
+    // 3级：加入震动
+    if (level >= 3) {
+      eggEl.classList.add('about-to-burst');
+    }
+
+    // 火花特效（2级以上）
+    if (level >= 2) {
+      this.spawnSparksOnEgg(eggEl, egg.color);
+    }
+  },
+
+  spawnSparksOnEgg(eggEl, color) {
+    this.clearSparks();
+    this.sparkInterval = setInterval(() => {
+      if (this.selectionLevel < 2 || this.selectedEggIndex === null) {
+        this.clearSparks();
+        return;
+      }
+      const rect = eggEl.getBoundingClientRect();
+      // 随机在蛋周围生成火花
+      for (let i = 0; i < 3; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'spark';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 20 + Math.random() * 30;
+        spark.style.cssText = `
+          left: ${rect.left + rect.width/2 + Math.cos(angle) * dist}px;
+          top: ${rect.top + rect.height/2 + Math.sin(angle) * dist}px;
+          --sx: ${(Math.random()-0.5) * 60}px;
+          --sy: ${(Math.random()-0.5) * 60 - 20}px;
+          background: ${color};
+          box-shadow: 0 0 6px ${color};
+        `;
+        document.body.appendChild(spark);
+        setTimeout(() => spark.remove(), 800);
+      }
+    }, 300);
+  },
+
+  pickSelected() {
+    if (this.selectedEggIndex === null) return null;
+    const eggIndex = this.selectedEggIndex;
+    const idx = this.remainingEggs.indexOf(eggIndex);
+    if (idx === -1) return null;
+    this.remainingEggs.splice(idx, 1);
+    const egg = CONFIG.eggs[eggIndex];
+    this.crackedEggs.push(egg);
+    this.currentEgg = egg;
+    return { egg, index: eggIndex };
+  },
+
+  resetSelection() {
+    this.selectedEggIndex = null;
+    this.selectionLevel = 0;
+    this.clearSparks();
+  }
+};
+
+// ============================================================
+// 界面渲染
+// ============================================================
+function getSortedEggs() {
+  // 按 order 字段排序，返回 {egg, originalIndex} 数组
+  return CONFIG.eggs
+    .map((egg, i) => ({ egg, originalIndex: i }))
+    .sort((a, b) => (a.egg.order ?? a.egg.id) - (b.egg.order ?? b.egg.id));
+}
+
+function renderEggs() {
+  const grid = document.getElementById('eggGrid');
+  const remainCount = document.getElementById('remainCount');
+
+  grid.innerHTML = '';
+  remainCount.textContent = GameState.getRemainingCount();
+
+  const sorted = getSortedEggs();
+  sorted.forEach(({ egg, originalIndex }, displayPos) => {
+    const isAvailable = GameState.remainingEggs.includes(originalIndex);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'egg-wrapper';
+
+    const eggEl = document.createElement('div');
+    eggEl.className = 'egg' + (isAvailable ? ' available' : ' cracked');
+    eggEl.style.background = isAvailable
+      ? `radial-gradient(ellipse at 35% 30%, ${lightenColor(egg.color, 30)}, ${egg.color} 70%, ${darkenColor(egg.color, 25)})`
+      : '#444';
+    eggEl.id = 'egg-' + originalIndex;
+
+    if (isAvailable) {
+      eggEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        GameState.selectEgg(originalIndex);
+        updateTapButton();
+      });
+    }
+
+    const label = document.createElement('div');
+    label.className = 'egg-label';
+    label.textContent = isAvailable ? '🥚 彩蛋 #' + (displayPos + 1) : '💔 已开启';
+
+    wrapper.appendChild(eggEl);
+    wrapper.appendChild(label);
+    grid.appendChild(wrapper);
+  });
+
+  // 恢复选中状态
+  if (GameState.selectedEggIndex !== null && GameState.selectionLevel > 0) {
+    GameState.updateSelectionUI(GameState.selectedEggIndex);
+  }
+
+  updateTapButton();
+}
+
+function updateTapButton() {
+  const btn = document.getElementById('btnTap');
+  const hint = document.getElementById('hintText');
+  if (GameState.selectedEggIndex !== null && GameState.selectionLevel > 0) {
+    btn.classList.add('has-selection');
+    btn.textContent = '💥 确认敲碎这个蛋！';
+    if (hint) hint.textContent = '已选中彩蛋 #' + (GameState.selectedEggIndex + 1) + '，点击上方按钮确认敲碎';
+  } else {
+    btn.classList.remove('has-selection');
+    btn.textContent = '✨ 像敲宝宝一样轻轻敲一下 ✨';
+    if (hint) hint.textContent = '先点击一个彩蛋选中它，然后按此按钮敲碎';
+  }
+}
+
+function lightenColor(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, (num >> 16) + Math.round(2.55 * percent));
+  const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round(2.55 * percent));
+  const b = Math.min(255, (num & 0x0000FF) + Math.round(2.55 * percent));
+  return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1);
+}
+
+function darkenColor(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, (num >> 16) - Math.round(2.55 * percent));
+  const g = Math.max(0, ((num >> 8) & 0x00FF) - Math.round(2.55 * percent));
+  const b = Math.max(0, (num & 0x0000FF) - Math.round(2.55 * percent));
+  return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1);
+}
+
+// ============================================================
+// 粒子效果
+// ============================================================
+function spawnParticles(x, y, color) {
+  const container = document.getElementById('particlesContainer');
+  const count = 25;
+
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    const size = 4 + Math.random() * 10;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 50 + Math.random() * 100;
+
+    particle.style.cssText = `
+      left: ${x}px;
+      top: ${y}px;
+      width: ${size}px;
+      height: ${size}px;
+      background: ${color};
+      --dx: ${Math.cos(angle) * distance}px;
+      --dy: ${Math.sin(angle) * distance - 40}px;
+    `;
+
+    container.appendChild(particle);
+    setTimeout(() => particle.remove(), 1500);
+  }
+}
+
+// ============================================================
+// 主流程：敲碎选中的蛋
+// ============================================================
+async function crackSelectedEgg() {
+  if (GameState.isProcessing) return;
+  if (GameState.getRemainingCount() === 0) return;
+  if (GameState.selectedEggIndex === null) return;
+
+  GameState.isProcessing = true;
+  const btn = document.getElementById('btnTap');
+  btn.disabled = true;
+  GameState.clearSparks();
+
+  const result = GameState.pickSelected();
+  if (!result) {
+    GameState.isProcessing = false;
+    btn.disabled = false;
+    return;
+  }
+
+  const { egg, index } = result;
+  const eggEl = document.getElementById('egg-' + index);
+
+  if (eggEl) {
+    const rect = eggEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    eggEl.classList.remove('selected-l1', 'selected-l2', 'selected-l3', 'about-to-burst');
+    eggEl.classList.add('breaking');
+    spawnParticles(cx, cy, egg.color);
+  }
+
+  GameState.resetSelection();
+  await sleep(800);
+  renderEggs();
+
+  // 暂停整体背景音乐，切换到每蛋音频
+  AudioManager.pauseAmbient();
+  AudioManager.playPrompt(egg.promptSound, egg.special?.loopPrompt === true, egg.bgMusic);
+  await showPrize(egg);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ============================================================
+// 显示奖品
+// ============================================================
+async function showPrize(egg) {
+  if (egg.special) {
+    await handleSpecial(egg);
+    return;
+  }
+  showPrizeOverlay(egg);
+}
+
+// ============================================================
+// 普通奖品展示弹窗
+// ============================================================
+function showPrizeOverlay(egg) {
+  const container = document.getElementById('overlayContainer');
+  const fontClass = 'font-' + (egg.fontStyle || 'normal');
+
+  const imageHtml = egg.image
+    ? `<img src="${egg.image}" class="prize-image" onclick="zoomImage('${egg.image}')" onerror="this.outerHTML='<div class=\\'prize-image placeholder\\'>📷<br>图片待上传</div>'" />`
+    : `<div class="prize-image placeholder">📷<br>图片待上传</div>`;
+
+  container.innerHTML = `
+    <div class="overlay" id="prizeOverlay">
+      <div class="prize-modal">
+        <h2 class="prize-name ${fontClass}">${egg.displayName}</h2>
+        ${imageHtml}
+        <p class="hint-text">点击图片可放大查看</p>
+        <div class="close-bar">
+          <button class="btn btn-close" onclick="closePrize()">关闭音乐 ✕</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+}
+
+// 图片点击放大
+function zoomImage(src) {
+  if (!src) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'image-zoom-overlay';
+  overlay.innerHTML = `<img src="${src}" /><span class="image-hint">点击任意位置关闭</span>`;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+
+function closePrize() {
+  AudioManager._stopPerEggAudio();
+  document.getElementById('overlayContainer').innerHTML = '';
+  document.getElementById('btnTap').disabled = false;
+  GameState.isProcessing = false;
+  renderEggs();
+
+  if (GameState.getRemainingCount() === 0) {
+    showClosing();
+  } else {
+    AudioManager.resumeAmbient();
+  }
+}
+
+// ============================================================
+// 特殊交互处理器
+// ============================================================
+async function handleSpecial(egg) {
+  const type = egg.special.type;
+
+  switch (type) {
+    case 'loveLetter':
+      await handleLoveLetter(egg);
+      break;
+    case 'girlfriendPower':
+      await handleGirlfriendPower(egg);
+      break;
+    case 'posePhoto':
+      await handlePosePhoto(egg);
+      break;
+    case 'lovePoem':
+      await handleLovePoem(egg);
+      break;
+    default:
+      showPrizeOverlay(egg);
+  }
+}
+
+// ============================================================
+// #3 情书
+// ============================================================
+function handleLoveLetter(egg) {
+  return new Promise((resolve) => {
+    const container = document.getElementById('overlayContainer');
+    container.innerHTML = `
+      <div class="overlay">
+        <div class="special-modal">
+          <h2 class="special-title">💌 情书</h2>
+          <div class="button-group" id="loveLetterBtns">
+            <button class="btn btn-choice" data-action="retry">不想，跳过</button>
+            <button class="btn btn-choice" data-action="continue">我好喜欢你，当然想听了</button>
+          </div>
+          <div id="loveLetterResponse"></div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('loveLetterBtns').addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') return;
+      const action = e.target.dataset.action;
+
+      if (action === 'retry') {
+        const resp = document.getElementById('loveLetterResponse');
+        resp.innerHTML = `<div class="response-msg">不可以哟，mua 💋</div>`;
+        setTimeout(() => { resp.innerHTML = ''; }, 1500);
+      } else if (action === 'continue') {
+        AudioManager.stopPrompt();
+        container.innerHTML = '';
+        showPrizeOverlay({ ...egg, image: egg.image, special: null });
+        resolve();
+      }
+    });
+  });
+}
+
+// ============================================================
+// #6 女友力
+// ============================================================
+function handleGirlfriendPower(egg) {
+  return new Promise((resolve) => {
+    const container = document.getElementById('overlayContainer');
+    container.innerHTML = `
+      <div class="overlay">
+        <div class="special-modal">
+          <h2 class="special-title">💪 女友力</h2>
+          <p style="margin-bottom:15px;color:#ccc;">抱着宝宝做蹲起</p>
+          <div class="button-group" id="gfPowerBtns">
+            <button class="btn btn-choice" data-action="accept">本宝宝力气大，自己做三个</button>
+            <button class="btn btn-choice" data-action="substitute">找别人代替，不过要付出点代价</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('gfPowerBtns').addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') return;
+      AudioManager.stopPrompt();
+      container.innerHTML = '';
+      showPrizeOverlay({ ...egg, image: egg.image, special: null });
+      resolve();
+    });
+  });
+}
+
+// ============================================================
+// #7 摆poss照相
+// ============================================================
+let poseSelectionState = {};
+
+function handlePosePhoto(egg) {
+  return new Promise((resolve) => {
+    poseSelectionState = {
+      egg,
+      resolve,
+      selectedPose: null,
+      roundPoses: pickRandomPoses(egg.special.pickCount || 2)
+    };
+    showPoseSelection();
+  });
+}
+
+function pickRandomPoses(count) {
+  const poses = [...CONFIG.poses];
+  const result = [];
+
+  for (let i = 0; i < Math.min(count, poses.length); i++) {
+    const totalWeight = poses.reduce((sum, p) => sum + (p.probability || 1), 0);
+    let rand = Math.random() * totalWeight;
+    let selectedIdx = 0;
+
+    for (let j = 0; j < poses.length; j++) {
+      rand -= (poses[j].probability || 1);
+      if (rand <= 0) { selectedIdx = j; break; }
+    }
+
+    result.push(poses[selectedIdx]);
+    poses.splice(selectedIdx, 1);
+  }
+
+  return result;
+}
+
+function refreshPoses() {
+  poseSelectionState.selectedPose = null;
+  poseSelectionState.roundPoses = pickRandomPoses(poseSelectionState.egg.special.pickCount || 2);
+  showPoseSelection();
+}
+
+function showPoseSelection() {
+  const container = document.getElementById('overlayContainer');
+  const state = poseSelectionState;
+
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="special-modal" style="max-width:480px;">
+        <h2 class="special-title">📸 在心中 — 摆poss照相</h2>
+        <p style="color:#aaa;margin-bottom:12px;">选择一个拍照姿势</p>
+        <div class="pose-list" id="poseList">
+          ${state.roundPoses.map((pose) => `
+            <div class="pose-card ${state.selectedPose?.id === pose.id ? 'selected' : ''}"
+                 data-pose-id="${pose.id}" style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="flex:1;cursor:pointer;" onclick="selectPose(${pose.id})">
+                <div class="pose-card-header">
+                  <span class="pose-card-icon">${pose.icon}</span>
+                  <span class="pose-card-name">${pose.name}</span>
+                  <span class="pose-card-category">${pose.category}</span>
+                </div>
+              </div>
+              <button class="btn btn-small" onclick="showPoseDetail(${pose.id})">查看</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="close-bar">
+          <button class="btn btn-refresh" onclick="refreshPoses()">🔄 换一批</button>
+          <button class="btn btn-confirm" onclick="confirmPose()" ${state.selectedPose ? '' : 'disabled'}>
+            确认选择
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function selectPose(poseId) {
+  poseSelectionState.selectedPose = CONFIG.poses.find(p => p.id === poseId);
+  showPoseSelection();
+}
+
+function showPoseDetail(poseId) {
+  const container = document.getElementById('overlayContainer');
+  const pose = CONFIG.poses.find(p => p.id === poseId);
+  if (!pose) return;
+
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="special-modal pose-detail">
+        <h3>${pose.icon} ${pose.name} <span style="color:#aaa;font-size:0.8rem;">${pose.category}</span></h3>
+        <span class="label">📝 动作描述</span>
+        <p>${pose.description}</p>
+        <span class="label">🎯 挑战点</span>
+        <p>${pose.challenge}</p>
+        <span class="label">✨ 出片效果</span>
+        <p>${pose.effect}</p>
+        <span class="label">💡 搞笑加成</span>
+        <p>${pose.bonus}</p>
+        <div class="close-bar">
+          <button class="btn btn-back" onclick="showPoseSelection()">← 返回选择</button>
+          <button class="btn btn-confirm" onclick="selectPose(${pose.id});showPoseSelection();">选这个</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function confirmPose() {
+  if (!poseSelectionState.selectedPose) return;
+
+  const state = poseSelectionState;
+  AudioManager.stopPrompt();
+  document.getElementById('overlayContainer').innerHTML = '';
+
+  showPrizeOverlay({
+    ...state.egg,
+    image: state.egg.image,
+    displayName: `在心中 — ${state.selectedPose.name}`,
+    special: null
+  });
+
+  state.resolve();
+}
+
+// ============================================================
+// #10 三行情诗
+// ============================================================
+let poemState = {};
+
+function handleLovePoem(egg) {
+  return new Promise((resolve) => {
+    poemState = { egg, resolve };
+    showPoemMainMenu();
+  });
+}
+
+function showPoemMainMenu() {
+  if (window._poemSaveTimer) { clearInterval(window._poemSaveTimer); window._poemSaveTimer = null; }
+  const container = document.getElementById('overlayContainer');
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="special-modal">
+        <h2 class="special-title">💝 三行情诗</h2>
+        <div class="button-group" id="poemMenuBtns">
+          <button class="btn btn-choice" data-action="write">✍️ 本宝宝自己写</button>
+          <button class="btn btn-choice" data-action="template">📋 给宝宝点提示，这是命令</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('poemMenuBtns').addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+    AudioManager.finishPromptLoop();
+    const action = e.target.dataset.action;
+    if (action === 'write') {
+      showPoemWritePage();
+    } else if (action === 'template') {
+      showPoemTemplatePage();
+    }
+  });
+}
+
+// ---- 自写模式 ----
+function showPoemWritePage() {
+  const container = document.getElementById('overlayContainer');
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="special-modal" style="max-width:480px;">
+        <h2 class="special-title">✍️ 写下你的三行情诗</h2>
+        <input type="text" id="poemTitle" class="poem-write-area" placeholder="标题（将作为文件名保存）"
+               style="min-height:auto;margin-bottom:8px;" />
+        <textarea id="poemContent" class="poem-write-area" placeholder="在这里写下你的三行情诗...&#10;&#10;&#10;" rows="6"></textarea>
+        <p id="poemSaveMsg" style="color:#69DB7C;margin-top:8px;display:none;">✅ 已自动保存</p>
+        <div class="close-bar">
+          <button class="btn btn-back" onclick="showPoemMainMenu()">← 返回</button>
+          <button class="btn btn-confirm" onclick="saveAndCompletePoem()">完成并继续</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (window._poemSaveTimer) clearInterval(window._poemSaveTimer);
+
+  const titleEl = document.getElementById('poemTitle');
+  const contentEl = document.getElementById('poemContent');
+  const msgEl = document.getElementById('poemSaveMsg');
+
+  function autoSave() {
+    const title = titleEl?.value?.trim();
+    const content = contentEl?.value?.trim();
+    if (title && content) {
+      savePoemToFile(title, content);
+      if (msgEl) { msgEl.style.display = 'block'; setTimeout(() => { if (msgEl) msgEl.style.display = 'none'; }, 2000); }
+    }
+  }
+
+  window._poemSaveTimer = setInterval(autoSave, 3000);
+}
+
+function savePoemToFile(title, content) {
+  const fullText = `${title}\n\n${content}`;
+  const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = title + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveAndCompletePoem() {
+  if (window._poemSaveTimer) { clearInterval(window._poemSaveTimer); window._poemSaveTimer = null; }
+  const title = document.getElementById('poemTitle').value.trim();
+  const content = document.getElementById('poemContent').value.trim();
+
+  if (!title || !content) {
+    alert('请填写标题和内容后再完成哦～');
+    return;
+  }
+
+  savePoemToFile(title, content);
+  AudioManager.stopPrompt();
+  document.getElementById('overlayContainer').innerHTML = '';
+  showPrizeOverlay({ ...poemState.egg, image: poemState.egg.image, special: null });
+  poemState.resolve();
+}
+
+// ---- 模板模式 ----
+function showPoemTemplatePage() {
+  if (window._poemSaveTimer) { clearInterval(window._poemSaveTimer); window._poemSaveTimer = null; }
+  pickRandomTemplate();
+
+  const container = document.getElementById('overlayContainer');
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="special-modal">
+        <h2 class="special-title">📋 三行情诗 — 模板模式</h2>
+        <p style="color:var(--gold);margin-bottom:12px;">主题：${poemState.templateTheme}</p>
+        <div class="button-group">
+          <button class="btn btn-choice" onclick="showPoemFillIn('easy')">🌟 初级 — 填空版</button>
+          <button class="btn btn-choice" onclick="showPoemFillIn('hard')">🔥 地狱级 — 标点填空版</button>
+        </div>
+        <div class="close-bar">
+          <button class="btn btn-back" onclick="showPoemMainMenu()">← 返回</button>
+          <button class="btn btn-refresh" onclick="refreshTemplate()">🔄 换一个模板</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function pickRandomTemplate() {
+  const templates = CONFIG.poemTemplates;
+  const template = templates[Math.floor(Math.random() * templates.length)];
+  poemState.currentTemplate = template;
+  poemState.templateTheme = template.full.split('\n')[0].slice(0, 15) + '...';
+}
+
+function refreshTemplate() {
+  pickRandomTemplate();
+  showPoemTemplatePage();
+}
+
+function showPoemFillIn(level) {
+  const template = poemState.currentTemplate;
+  const data = level === 'easy' ? template.fillIn : template.punctuation;
+  const container = document.getElementById('overlayContainer');
+
+  if (level === 'easy') {
+    const lines = data.text.split('\n');
+    let blankIdx = 0;
+    const linesHtml = lines.map(line => {
+      const parts = line.split('______');
+      return parts.map((part, i) => {
+        if (i < parts.length - 1) {
+          const idx = blankIdx++;
+          return part + `<input class="poem-fill-input" id="blank${idx}" placeholder="填词" />`;
+        }
+        return part;
+      }).join('');
+    }).join('<br>');
+
+    container.innerHTML = `
+      <div class="overlay">
+        <div class="special-modal" style="max-width:500px;">
+          <h2 class="special-title">🌟 填空版</h2>
+          <div class="poem-preview" style="line-height:2.5;">${linesHtml}</div>
+          <p style="color:#aaa;font-size:0.8rem;margin-top:8px;">
+            提示词：${data.blanks.join('、')}
+          </p>
+          <div class="close-bar">
+            <button class="btn btn-back" onclick="showPoemTemplatePage()">← 返回</button>
+            <button class="btn btn-confirm" onclick="checkFillInAnswers('easy')">提交</button>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    const lines = data.text.split('\n');
+    let punctIdx = 0;
+    const linesHtml = lines.map(line => {
+      const parts = line.split('___');
+      return parts.map((part, i) => {
+        if (i < parts.length - 1) {
+          const idx = punctIdx++;
+          return part + `<input class="poem-fill-input" id="punct${idx}" placeholder="标点" style="width:60px;" maxlength="2" />`;
+        }
+        return part;
+      }).join('');
+    }).join('<br>');
+
+    container.innerHTML = `
+      <div class="overlay">
+        <div class="special-modal" style="max-width:500px;">
+          <h2 class="special-title">🔥 标点填空版</h2>
+          <div class="poem-preview" style="line-height:2.5;">${linesHtml}</div>
+          <p style="color:#aaa;font-size:0.8rem;margin-top:8px;">填入你喜欢的标点符号</p>
+          <div class="close-bar">
+            <button class="btn btn-back" onclick="showPoemTemplatePage()">← 返回</button>
+            <button class="btn btn-confirm" onclick="checkFillInAnswers('hard')">提交</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  poemState.currentLevel = level;
+}
+
+function checkFillInAnswers(level) {
+  const template = poemState.currentTemplate;
+  const data = level === 'easy' ? template.fillIn : template.punctuation;
+  const count = level === 'easy' ? data.blanks.length : data.answers.length;
+
+  let allFilled = true;
+  for (let i = 0; i < count; i++) {
+    const id = level === 'easy' ? 'blank' + i : 'punct' + i;
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) allFilled = false;
+  }
+
+  if (!allFilled) {
+    alert('请填写所有空白后再提交哦～');
+    return;
+  }
+
+  // 地狱级(标点填空)：不验证答案，任何填写都通过
+  // 初级(填空版)：也不强制验证，展示完整版即可
+
+  const container = document.getElementById('overlayContainer');
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="special-modal">
+        <h2 class="special-title">✨ 完成！原诗欣赏</h2>
+        <div class="poem-preview">${template.full}</div>
+        <div class="close-bar">
+          <button class="btn btn-confirm" onclick="completePoemTemplate()">💝 完成</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function completePoemTemplate() {
+  if (window._poemSaveTimer) { clearInterval(window._poemSaveTimer); window._poemSaveTimer = null; }
+  AudioManager.stopPrompt();
+  document.getElementById('overlayContainer').innerHTML = '';
+  showPrizeOverlay({ ...poemState.egg, image: poemState.egg.image, special: null });
+  poemState.resolve();
+}
+
+// ============================================================
+// 结束语
+// ============================================================
+function showClosing() {
+  const btn = document.getElementById('btnTap');
+  btn.textContent = '🎉 全部彩蛋已开启 🎉';
+  btn.disabled = true;
+  btn.style.animation = 'none';
+  btn.style.background = 'linear-gradient(135deg, #f7971e, #ffd200)';
+  btn.classList.remove('has-selection');
+  const hint = document.getElementById('hintText');
+  if (hint) hint.textContent = '';
+
+  AudioManager.stopAmbient();
+  AudioManager.playPrompt(CONFIG.closingSound);
+
+  const container = document.getElementById('overlayContainer');
+  container.innerHTML = `
+    <div class="overlay">
+      <div class="prize-modal">
+        <h2 style="font-size:2rem;margin-bottom:10px;">🎊</h2>
+        <h2 style="color:var(--gold);margin-bottom:15px;">全部彩蛋已开启！</h2>
+        <p style="color:#aaa;margin-bottom:10px;">希望宝宝喜欢这些礼物～</p>
+        <p style="color:#e94560;">❤️ 永远爱你 ❤️</p>
+        <div class="close-bar">
+          <button class="btn btn-close" onclick="AudioManager.stopAll();document.getElementById('overlayContainer').innerHTML='';">关闭</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// 初始化
+// ============================================================
+function init() {
+  GameState.init();
+  renderEggs();
+
+  // 启动整体背景音乐（主页循环播放）
+  AudioManager.startAmbient(CONFIG.ambientMusic);
+
+  // 预加载所有音频
+  CONFIG.eggs.forEach(egg => {
+    if (egg.promptSound) {
+      const a = new Audio(); a.src = egg.promptSound; a.preload = 'auto';
+    }
+    if (egg.bgMusic) {
+      const a = new Audio(); a.src = egg.bgMusic; a.preload = 'auto';
+    }
+  });
+  if (CONFIG.closingSound) {
+    const a = new Audio(); a.src = CONFIG.closingSound; a.preload = 'auto';
+  }
+  if (CONFIG.ambientMusic) {
+    const a = new Audio(); a.src = CONFIG.ambientMusic; a.preload = 'auto';
+  }
+}
+
+init();
+console.log('🎁 宝宝专属抽奖机已就绪！');
+console.log('💡 提示：修改 config.js 即可更换礼物、音频等配置');
+console.log('🥚 点击彩蛋选中 → 多次点击变强 → 按确认键敲碎');
+console.log('🎵 整体背景音乐已开始播放');
+</script>
+</body>
+</html>
