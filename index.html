@@ -421,6 +421,69 @@ body::after {
   box-shadow: 0 12px 40px rgba(0,0,0,0.4);
 }
 
+/* 单图心跳动画 */
+.prize-image.heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.prize-image.heartbeat:hover {
+  animation: none;
+  transform: scale(1.05);
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.08); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.05); }
+  56% { transform: scale(1); }
+}
+
+/* 多图轮播 */
+.slideshow-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 15px auto;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  border: 3px solid rgba(255,255,255,0.1);
+}
+
+.slideshow-wrap .slide-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  animation: slideFadeIn 0.5s ease-out;
+}
+
+@keyframes slideFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.slideshow-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.slideshow-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.slideshow-dots .dot.active {
+  background: var(--gold);
+}
+
 .prize-image.placeholder {
   background: rgba(255,255,255,0.05);
   display: flex;
@@ -1201,17 +1264,26 @@ async function showPrize(egg) {
 function showPrizeOverlay(egg) {
   const container = document.getElementById('overlayContainer');
   const fontClass = 'font-' + (egg.fontStyle || 'normal');
+  const images = Array.isArray(egg.image) ? egg.image : (egg.image ? [egg.image] : []);
+  const isMulti = images.length > 1;
 
-  const imageHtml = egg.image
-    ? `<img src="${egg.image}" class="prize-image" onclick="zoomImage('${egg.image}')" onerror="this.outerHTML='<div class=\\'prize-image placeholder\\'>📷<br>图片待上传</div>'" />`
-    : `<div class="prize-image placeholder">📷<br>图片待上传</div>`;
+  const imageHtml = images.length === 0
+    ? `<div class="prize-image placeholder">📷<br>图片待上传</div>`
+    : isMulti
+      ? `<div class="slideshow-wrap" id="slideshowWrap">
+           <img src="${images[0]}" class="slide-img" onclick="zoomImage(window._slideshowImages[window._slideshowIdx])" />
+         </div>
+         <div class="slideshow-dots" id="slideshowDots">
+           ${images.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}" data-idx="${i}"></span>`).join('')}
+         </div>`
+      : `<img src="${images[0]}" class="prize-image heartbeat" onclick="zoomImage('${images[0]}')" onerror="this.outerHTML='<div class=\\'prize-image placeholder\\'>📷<br>图片待上传</div>'" />`;
 
   container.innerHTML = `
     <div class="overlay" id="prizeOverlay">
       <div class="prize-modal">
         <h2 class="prize-name ${fontClass}">${egg.displayName}</h2>
         ${imageHtml}
-        <p class="hint-text">点击图片可放大查看</p>
+        <p class="hint-text">${isMulti ? '图片自动轮播中 · 点击图片放大' : '点击图片可放大查看'}</p>
         <div class="close-bar">
           <button class="btn btn-close" onclick="closePrize()">关闭音乐 ✕</button>
         </div>
@@ -1219,6 +1291,38 @@ function showPrizeOverlay(egg) {
     </div>
   `;
 
+  if (isMulti) {
+    window._slideshowImages = images;
+    window._slideshowIdx = 0;
+    window._slideshowTimer = setInterval(_advanceSlide, 3000);
+
+    document.getElementById('slideshowDots')?.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('dot')) return;
+      const idx = parseInt(e.target.dataset.idx);
+      if (idx === window._slideshowIdx) return;
+      _jumpToSlide(idx);
+    });
+  }
+}
+
+function _advanceSlide() {
+  const idx = (window._slideshowIdx + 1) % window._slideshowImages.length;
+  _jumpToSlide(idx);
+}
+
+function _jumpToSlide(idx) {
+  window._slideshowIdx = idx;
+  const imgEl = document.getElementById('slideshowWrap')?.querySelector('img');
+  if (imgEl) {
+    imgEl.src = window._slideshowImages[idx];
+    imgEl.classList.remove('slide-img');
+    void imgEl.offsetWidth;
+    imgEl.classList.add('slide-img');
+  }
+  document.querySelectorAll('#slideshowDots .dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+  // 重置自动轮播计时
+  clearInterval(window._slideshowTimer);
+  window._slideshowTimer = setInterval(_advanceSlide, 3000);
 }
 
 // 图片点击放大
@@ -1233,6 +1337,7 @@ function zoomImage(src) {
 
 function closePrize() {
   AudioManager._stopPerEggAudio();
+  if (window._slideshowTimer) { clearInterval(window._slideshowTimer); window._slideshowTimer = null; }
   document.getElementById('overlayContainer').innerHTML = '';
   document.getElementById('btnTap').disabled = false;
   GameState.isProcessing = false;

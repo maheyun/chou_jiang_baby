@@ -21,7 +21,7 @@ const CONFIG = {
       type: 'gift',
       displayName: '自然色美美哒气垫',
       fontStyle: 'beautiful', // 'beautiful' | 'serious' | 'normal'
-      image: '图片/1/微信图片_20260513203709_172_95.jpg',
+      image: '图片/1/气垫.jpg',
       promptSound: '提示音/1/顺口溜，成功.m4a',
       bgMusic: '背景音乐/1/气垫.flac',
       special: null
@@ -34,7 +34,7 @@ const CONFIG = {
       type: 'gift',
       displayName: '宝宝同款小黄帽防晒霜',
       fontStyle: 'beautiful',
-      image: '图片/2/placeholder.jpg',
+      image: '图片/2/防晒霜.png',
       promptSound: '提示音/2/防晒霜.m4a',
       bgMusic: '背景音乐/2/防晒霜.flac',
       special: null
@@ -47,7 +47,7 @@ const CONFIG = {
       type: 'gift',
       displayName: '情书',
       fontStyle: 'serious',
-      image: '图片/3/placeholder.jpg',
+      image: '图片/3/情书.jpg',
       promptSound: '提示音/3/情书.m4a',
       bgMusic: '背景音乐/3/情书.flac',
       special: {
@@ -66,7 +66,7 @@ const CONFIG = {
       type: 'gift',
       displayName: '代替我一直在你身边',
       fontStyle: 'beautiful',
-      image: '图片/4/placeholder.jpg',
+      image: '图片/4/拍拍灯.jpg',
       promptSound: '提示音/4/拍拍灯.m4a',
       bgMusic: '背景音乐/4/拍拍灯.flac',
       special: null
@@ -79,7 +79,7 @@ const CONFIG = {
       type: 'gift',
       displayName: '神秘大奖',
       fontStyle: 'beautiful',
-      image: '图片/5/placeholder.jpg',
+      image: '图片/5/通用图片.jpg',
       promptSound: '提示音/5/神秘大奖.m4a',
       bgMusic: '背景音乐/5/神秘大奖.flac',
       special: null
@@ -92,7 +92,7 @@ const CONFIG = {
       type: 'punishment',
       displayName: '女友力',
       fontStyle: 'normal',
-      image: '图片/6/placeholder.jpg',
+      image: ['图片/6/蹲起.png', '图片/6/蹲起(女孩背男孩).png'],
       promptSound: '提示音/6/蹲起.m4a',
       bgMusic: '背景音乐/6/蹲起.m4a',
       special: {
@@ -112,7 +112,7 @@ const CONFIG = {
       type: 'punishment',
       displayName: '在心中',
       fontStyle: 'beautiful',
-      image: '图片/7/placeholder.jpg',
+      image: ['图片/7/摆poss.png', '图片/7/摆poss2.png'],
       promptSound: '提示音/7/poss.m4a',
       bgMusic: '背景音乐/7/poss.flac',
       special: {
@@ -129,7 +129,14 @@ const CONFIG = {
       type: 'punishment',
       displayName: 'look my 0_0',
       fontStyle: 'normal',
-      image: '图片/8/placeholder.jpg',
+      image: [
+        '图片/8/微信图片_20260515000651_189_95.jpg',
+        '图片/8/微信图片_20260515000805_190_95.jpg',
+        '图片/8/微信图片_20260515000820_191_95.jpg',
+        '图片/8/微信图片_20260515000836_192_95.jpg',
+        '图片/8/微信图片_20260515000927_193_95.jpg',
+        '图片/8/微信图片_20260515001015_194_95.jpg'
+      ],
       promptSound: '提示音/8/30s.m4a',
       bgMusic: '背景音乐/8/对视.flac',
       special: null
@@ -142,7 +149,7 @@ const CONFIG = {
       type: 'punishment',
       displayName: '小秘密',
       fontStyle: 'normal',
-      image: '图片/9/placeholder.jpg',
+      image: '图片/9/照片抽取.png',
       promptSound: '提示音/9/照片.m4a',
       bgMusic: '背景音乐/9/照片.flac',
       special: null
@@ -155,7 +162,7 @@ const CONFIG = {
       type: 'punishment',
       displayName: '三行情诗',
       fontStyle: 'normal',
-      image: '图片/10/placeholder.jpg',
+      image: '图片/10/三行情书.jpg',
       promptSound: '提示音/10/三行情诗.m4a',
       bgMusic: '背景音乐/10/三行情诗.mp3',
       special: {
