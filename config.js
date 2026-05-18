@@ -6,7 +6,7 @@
 
 const CONFIG = {
   // ========== 结束语 ==========
-  closingSound: '结束语/结束语.m4a',
+  closingSound: '结束语/最终结束语.m4a',
 
   // ========== 整体背景音乐（主页循环播放） ==========
   ambientMusic: '整体背景音乐/整体背景音乐.flac',
