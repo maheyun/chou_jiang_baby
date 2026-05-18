@@ -773,7 +773,7 @@ body::after {
 <!-- ========== 主界面 ========== -->
 <div class="main-container" id="mainContainer">
   <div class="title">🎁 宝宝专属抽奖机 🎁</div>
-  <div class="subtitle">点击按钮，随机敲开一个彩蛋</div>
+  <div class="subtitle">点击彩蛋选中 → 敲开它，里面奖品随机哟</div>
 
   <div class="progress">
     剩余彩蛋：<span id="remainCount">10</span> / 10
@@ -965,67 +965,158 @@ const AudioManager = {
 // 游戏状态管理
 // ============================================================
 //
-// 抽奖规则：
-//  - 前 8 个：从剩余的非保留彩蛋中随机抽取
-//  - 第 9 个（倒数第二）：固定为气垫   (CONFIG.eggs 中索引 0)
-//  - 第 10 个（最后）：  固定为神秘大奖 (CONFIG.eggs 中索引 4)
+// 核心设计：彩蛋位置 ≠ 奖品内容
+//  - remainingSlots: 桌面上还剩哪些彩蛋位置（视觉上的蛋壳）
+//  - prizePool:      奖池里还剩哪些奖品（蛋壳里面装的礼物）
+//  用户选择并敲碎一个蛋壳 → 系统从奖池中按规则随机分配一个奖品
 //
-const RESERVED_SECOND_LAST = 0;  // 气垫的 eggs 数组索引
-const RESERVED_LAST       = 4;  // 神秘大奖的 eggs 数组索引
+//  抽奖规则：
+//   - 前 8 个：从奖池非保留奖品中随机抽取
+//   - 第 9 个（倒数第二）：固定为气垫   (CONFIG.eggs 中索引 0)
+//   - 第 10 个（最后一个）：固定为神秘大奖 (CONFIG.eggs 中索引 4)
+//
+const RESERVED_SECOND_LAST = 0;  // 气垫
+const RESERVED_LAST       = 4;  // 神秘大奖
 
 const GameState = {
-  remainingEggs: [],
-  crackedEggs: [],
+  remainingSlots: [],      // 桌面上剩余的蛋壳位置 (CONFIG.eggs 索引)
+  prizePool: [],           // 奖池中剩余的奖品 (CONFIG.eggs 索引)
   isProcessing: false,
-  currentEgg: null,
+  selectedSlotIndex: null, // 当前选中的蛋壳
+  selectionLevel: 0,
+  sparkInterval: null,
 
   init() {
-    this.remainingEggs = CONFIG.eggs.map((_, i) => i);
-    this.crackedEggs = [];
+    const all = CONFIG.eggs.map((_, i) => i);
+    this.remainingSlots = [...all];
+    this.prizePool = [...all];
     this.isProcessing = false;
-    this.currentEgg = null;
+    this.selectedSlotIndex = null;
+    this.selectionLevel = 0;
+    this.clearSparks();
   },
 
   getRemainingCount() {
-    return this.remainingEggs.length;
+    return this.remainingSlots.length;
   },
 
-  // 按规则随机抽取一个彩蛋
-  pickRandom() {
-    const count = this.remainingEggs.length;
+  clearSparks() {
+    if (this.sparkInterval) { clearInterval(this.sparkInterval); this.sparkInterval = null; }
+  },
+
+  // ========== 蛋壳选择 ==========
+  selectSlot(index) {
+    if (this.isProcessing) return;
+    if (!this.remainingSlots.includes(index)) return;
+
+    this.clearSparks();
+
+    if (this.selectedSlotIndex === index) {
+      this.selectionLevel = Math.min(this.selectionLevel + 1, 3);
+    } else {
+      this.selectedSlotIndex = index;
+      this.selectionLevel = 1;
+    }
+
+    updateSlotSelectionUI(index);
+  },
+
+  consumeSelectedSlot() {
+    if (this.selectedSlotIndex === null) return -1;
+    const slot = this.selectedSlotIndex;
+    const idx = this.remainingSlots.indexOf(slot);
+    if (idx === -1) return -1;
+    this.remainingSlots.splice(idx, 1);
+    return slot;
+  },
+
+  resetSelection() {
+    this.selectedSlotIndex = null;
+    this.selectionLevel = 0;
+    this.clearSparks();
+  },
+
+  // ========== 奖池抽取（按规则） ==========
+  pickPrize() {
+    const count = this.prizePool.length;
     if (count === 0) return null;
 
-    let eggIndex;
+    let prizeIdx;
     if (count === 1) {
-      // 最后一个：必须是保留的最后大奖
-      eggIndex = RESERVED_LAST;
+      prizeIdx = RESERVED_LAST;
     } else if (count === 2) {
-      // 倒数第二个：必须是保留的倒数第二大奖
-      eggIndex = RESERVED_SECOND_LAST;
+      prizeIdx = RESERVED_SECOND_LAST;
     } else {
-      // 前 8 个：从非保留彩蛋中随机抽取
-      const pool = this.remainingEggs.filter(
+      const pool = this.prizePool.filter(
         i => i !== RESERVED_SECOND_LAST && i !== RESERVED_LAST
       );
-      eggIndex = pool[Math.floor(Math.random() * pool.length)];
+      prizeIdx = pool[Math.floor(Math.random() * pool.length)];
     }
 
-    const idx = this.remainingEggs.indexOf(eggIndex);
-    if (idx === -1) {
-      // 防御：如果保留蛋意外已被抽走，退回纯随机
-      eggIndex = this.remainingEggs[Math.floor(Math.random() * this.remainingEggs.length)];
-      const fallbackIdx = this.remainingEggs.indexOf(eggIndex);
-      this.remainingEggs.splice(fallbackIdx, 1);
+    // 从奖池中移除
+    const pos = this.prizePool.indexOf(prizeIdx);
+    if (pos === -1) {
+      // 防御：保留奖品意外已被抽走，退回纯随机
+      prizeIdx = this.prizePool[Math.floor(Math.random() * this.prizePool.length)];
+      this.prizePool.splice(this.prizePool.indexOf(prizeIdx), 1);
     } else {
-      this.remainingEggs.splice(idx, 1);
+      this.prizePool.splice(pos, 1);
     }
 
-    const egg = CONFIG.eggs[eggIndex];
-    this.crackedEggs.push(egg);
-    this.currentEgg = egg;
-    return { egg, index: eggIndex };
+    return CONFIG.eggs[prizeIdx];
+  },
+
+  // ========== 火花特效 ==========
+  spawnSparksOnEgg(eggEl, color) {
+    this.clearSparks();
+    this.sparkInterval = setInterval(() => {
+      if (this.selectionLevel < 2 || this.selectedSlotIndex === null) {
+        this.clearSparks();
+        return;
+      }
+      const rect = eggEl.getBoundingClientRect();
+      for (let i = 0; i < 3; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'spark';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 20 + Math.random() * 30;
+        spark.style.cssText = `
+          left: ${rect.left + rect.width/2 + Math.cos(angle) * dist}px;
+          top: ${rect.top + rect.height/2 + Math.sin(angle) * dist}px;
+          --sx: ${(Math.random()-0.5) * 60}px;
+          --sy: ${(Math.random()-0.5) * 60 - 20}px;
+          background: ${color};
+          box-shadow: 0 0 6px ${color};
+        `;
+        document.body.appendChild(spark);
+        setTimeout(() => spark.remove(), 800);
+      }
+    }, 300);
   }
 };
+
+// ========== 蛋壳选中 UI ==========
+function updateSlotSelectionUI(index) {
+  document.querySelectorAll('.egg').forEach(el => {
+    el.classList.remove('selected-l1', 'selected-l2', 'selected-l3', 'about-to-burst');
+    el.style.setProperty('--glow-color', '');
+  });
+  document.querySelectorAll('.egg-wrapper').forEach(w => w.classList.remove('has-selection'));
+
+  const eggEl = document.getElementById('egg-' + index);
+  const wrapper = eggEl?.parentElement;
+  if (!eggEl || !wrapper) return;
+
+  const color = CONFIG.eggs[index].color;
+  const level = GameState.selectionLevel;
+
+  eggEl.classList.add('selected-l' + level);
+  eggEl.style.setProperty('--glow-color', color);
+  wrapper.classList.add('has-selection');
+
+  if (level >= 3) eggEl.classList.add('about-to-burst');
+  if (level >= 2) GameState.spawnSparksOnEgg(eggEl, color);
+}
 
 // ============================================================
 // 界面渲染
@@ -1046,7 +1137,7 @@ function renderEggs() {
 
   const sorted = getSortedEggs();
   sorted.forEach(({ egg, originalIndex }, displayPos) => {
-    const isAvailable = GameState.remainingEggs.includes(originalIndex);
+    const isAvailable = GameState.remainingSlots.includes(originalIndex);
     const wrapper = document.createElement('div');
     wrapper.className = 'egg-wrapper';
 
@@ -1057,6 +1148,14 @@ function renderEggs() {
       : '#444';
     eggEl.id = 'egg-' + originalIndex;
 
+    if (isAvailable) {
+      eggEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        GameState.selectSlot(originalIndex);
+        updateTapButton();
+      });
+    }
+
     const label = document.createElement('div');
     label.className = 'egg-label';
     label.textContent = isAvailable ? '🥚 彩蛋 #' + (displayPos + 1) : '💔 已开启';
@@ -1066,6 +1165,11 @@ function renderEggs() {
     grid.appendChild(wrapper);
   });
 
+  // 恢复选中状态
+  if (GameState.selectedSlotIndex !== null && GameState.selectionLevel > 0) {
+    updateSlotSelectionUI(GameState.selectedSlotIndex);
+  }
+
   updateTapButton();
 }
 
@@ -1073,14 +1177,28 @@ function updateTapButton() {
   const btn = document.getElementById('btnTap');
   const hint = document.getElementById('hintText');
   const count = GameState.getRemainingCount();
-  if (count > 0) {
-    btn.disabled = false;
-    btn.textContent = '✨ 像敲宝宝一样轻轻敲一下 ✨';
-    if (hint) hint.textContent = `还有 ${count} 个彩蛋，点击按钮随机敲碎一个`;
-  } else {
+  const hasSelection = GameState.selectedSlotIndex !== null && GameState.selectionLevel > 0;
+
+  if (count === 0) {
     btn.textContent = '🎉 全部彩蛋已开启 🎉';
     btn.disabled = true;
+    btn.classList.remove('has-selection');
     if (hint) hint.textContent = '';
+    return;
+  }
+
+  if (hasSelection) {
+    btn.classList.add('has-selection');
+    btn.textContent = '💥 确认敲碎这个蛋！';
+    const slotDisplay = getSortedEggs().findIndex(
+      s => s.originalIndex === GameState.selectedSlotIndex
+    ) + 1;
+    if (hint) hint.textContent = `已选中彩蛋 #${slotDisplay}，点击上方按钮敲碎（奖品随机）`;
+  } else {
+    btn.classList.remove('has-selection');
+    btn.textContent = '✨ 像敲宝宝一样轻轻敲一下 ✨';
+    btn.disabled = false;
+    if (hint) hint.textContent = `还有 ${count} 个彩蛋，先点击一个彩蛋选中它`;
   }
 }
 
@@ -1130,42 +1248,48 @@ function spawnParticles(x, y, color) {
 }
 
 // ============================================================
-// 主流程：随机敲碎一个蛋
+// 主流程：敲碎选中的蛋壳，随机分配奖品
 // ============================================================
 async function crackSelectedEgg() {
   if (GameState.isProcessing) return;
   if (GameState.getRemainingCount() === 0) return;
+  if (GameState.selectedSlotIndex === null) return;
 
   GameState.isProcessing = true;
   const btn = document.getElementById('btnTap');
   btn.disabled = true;
+  GameState.clearSparks();
 
-  const result = GameState.pickRandom();
-  if (!result) {
+  // 从奖池中随机抽取奖品（按规则）
+  const prize = GameState.pickPrize();
+  if (!prize) {
     GameState.isProcessing = false;
     btn.disabled = false;
     return;
   }
 
-  const { egg, index } = result;
-  const eggEl = document.getElementById('egg-' + index);
+  // 消费选中的蛋壳（视觉位置）
+  const slotIndex = GameState.consumeSelectedSlot();
+  GameState.resetSelection();
 
+  const eggEl = document.getElementById('egg-' + slotIndex);
   if (eggEl) {
     const rect = eggEl.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
+    eggEl.classList.remove('selected-l1', 'selected-l2', 'selected-l3', 'about-to-burst');
     eggEl.classList.add('breaking');
-    spawnParticles(cx, cy, egg.color);
+    spawnParticles(cx, cy, prize.color);
   }
 
   await sleep(800);
   renderEggs();
 
-  // 暂停整体背景音乐，切换到每蛋音频
+  // 暂停整体背景音乐，切换到该奖品的音频
   AudioManager.pauseAmbient();
-  AudioManager.playPrompt(egg.promptSound, egg.special?.loopPrompt === true, egg.bgMusic);
-  await showPrize(egg);
+  AudioManager.playPrompt(prize.promptSound, prize.special?.loopPrompt === true, prize.bgMusic);
+  await showPrize(prize);
 }
 
 function sleep(ms) {
