@@ -15,14 +15,14 @@ const CONFIG = {
   eggs: [
     {
       id: 1,
-      order: 9,  // 显示顺序（数字越小越靠前），改这个数字即可调整彩蛋排列顺序
+      order: 10,  // 显示顺序（数字越小越靠前），改这个数字即可调整彩蛋排列顺序
       color: '#FF6B6B',
       colorName: '珊瑚红',
       type: 'gift',
       displayName: '自然色美美哒气垫',
       fontStyle: 'beautiful', // 'beautiful' | 'serious' | 'normal'
       image: '图片/1/气垫.jpg',
-      promptSound: '提示音/1/顺口溜，成功.m4a',
+      promptSound: '提示音/1/气垫.m4a',
       bgMusic: '背景音乐/1/气垫.flac',
       special: null
     },
@@ -73,7 +73,7 @@ const CONFIG = {
     },
     {
       id: 5,
-      order: 10,
+      order: 9,
       color: '#4DABF7',
       colorName: '天蓝色',
       type: 'gift',
