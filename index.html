@@ -773,7 +773,7 @@ body::after {
 <!-- ========== 主界面 ========== -->
 <div class="main-container" id="mainContainer">
   <div class="title">🎁 宝宝专属抽奖机 🎁</div>
-  <div class="subtitle">点击彩蛋选中，再敲一下～</div>
+  <div class="subtitle">点击按钮，随机敲开一个彩蛋</div>
 
   <div class="progress">
     剩余彩蛋：<span id="remainCount">10</span> / 10
@@ -785,7 +785,7 @@ body::after {
     ✨ 像敲宝宝一样轻轻敲一下 ✨
   </button>
   <div class="hint-text" style="text-align:center;" id="hintText">
-    先点击一个彩蛋选中它，然后按此按钮敲碎
+    点击按钮随机敲碎一个彩蛋
   </div>
 </div>
 
@@ -964,125 +964,66 @@ const AudioManager = {
 // ============================================================
 // 游戏状态管理
 // ============================================================
+//
+// 抽奖规则：
+//  - 前 8 个：从剩余的非保留彩蛋中随机抽取
+//  - 第 9 个（倒数第二）：固定为气垫   (CONFIG.eggs 中索引 0)
+//  - 第 10 个（最后）：  固定为神秘大奖 (CONFIG.eggs 中索引 4)
+//
+const RESERVED_SECOND_LAST = 0;  // 气垫的 eggs 数组索引
+const RESERVED_LAST       = 4;  // 神秘大奖的 eggs 数组索引
+
 const GameState = {
   remainingEggs: [],
   crackedEggs: [],
   isProcessing: false,
   currentEgg: null,
-  selectedEggIndex: null,   // 当前选中的蛋索引
-  selectionLevel: 0,        // 选中等级 (0=未选中, 1-3=逐级)
-  sparkInterval: null,      // 火花定时器
 
   init() {
     this.remainingEggs = CONFIG.eggs.map((_, i) => i);
     this.crackedEggs = [];
     this.isProcessing = false;
     this.currentEgg = null;
-    this.selectedEggIndex = null;
-    this.selectionLevel = 0;
-    this.clearSparks();
   },
 
   getRemainingCount() {
     return this.remainingEggs.length;
   },
 
-  clearSparks() {
-    if (this.sparkInterval) { clearInterval(this.sparkInterval); this.sparkInterval = null; }
-  },
+  // 按规则随机抽取一个彩蛋
+  pickRandom() {
+    const count = this.remainingEggs.length;
+    if (count === 0) return null;
 
-  selectEgg(index) {
-    if (this.isProcessing) return;
-    if (!this.remainingEggs.includes(index)) return;
-
-    this.clearSparks();
-
-    if (this.selectedEggIndex === index) {
-      // 同一个蛋：升级
-      this.selectionLevel = Math.min(this.selectionLevel + 1, 3);
+    let eggIndex;
+    if (count === 1) {
+      // 最后一个：必须是保留的最后大奖
+      eggIndex = RESERVED_LAST;
+    } else if (count === 2) {
+      // 倒数第二个：必须是保留的倒数第二大奖
+      eggIndex = RESERVED_SECOND_LAST;
     } else {
-      // 不同的蛋：切换
-      this.selectedEggIndex = index;
-      this.selectionLevel = 1;
+      // 前 8 个：从非保留彩蛋中随机抽取
+      const pool = this.remainingEggs.filter(
+        i => i !== RESERVED_SECOND_LAST && i !== RESERVED_LAST
+      );
+      eggIndex = pool[Math.floor(Math.random() * pool.length)];
     }
 
-    this.updateSelectionUI(index);
-  },
-
-  updateSelectionUI(index) {
-    // 清除所有选中状态
-    document.querySelectorAll('.egg').forEach(el => {
-      el.classList.remove('selected-l1', 'selected-l2', 'selected-l3', 'about-to-burst');
-      el.style.setProperty('--glow-color', '');
-    });
-    document.querySelectorAll('.egg-wrapper').forEach(w => w.classList.remove('has-selection'));
-
-    const eggEl = document.getElementById('egg-' + index);
-    const wrapper = eggEl?.parentElement;
-    if (!eggEl || !wrapper) return;
-
-    const egg = CONFIG.eggs[index];
-    const level = this.selectionLevel;
-
-    eggEl.classList.add('selected-l' + level);
-    eggEl.style.setProperty('--glow-color', egg.color);
-    wrapper.classList.add('has-selection');
-
-    // 3级：加入震动
-    if (level >= 3) {
-      eggEl.classList.add('about-to-burst');
-    }
-
-    // 火花特效（2级以上）
-    if (level >= 2) {
-      this.spawnSparksOnEgg(eggEl, egg.color);
-    }
-  },
-
-  spawnSparksOnEgg(eggEl, color) {
-    this.clearSparks();
-    this.sparkInterval = setInterval(() => {
-      if (this.selectionLevel < 2 || this.selectedEggIndex === null) {
-        this.clearSparks();
-        return;
-      }
-      const rect = eggEl.getBoundingClientRect();
-      // 随机在蛋周围生成火花
-      for (let i = 0; i < 3; i++) {
-        const spark = document.createElement('div');
-        spark.className = 'spark';
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 20 + Math.random() * 30;
-        spark.style.cssText = `
-          left: ${rect.left + rect.width/2 + Math.cos(angle) * dist}px;
-          top: ${rect.top + rect.height/2 + Math.sin(angle) * dist}px;
-          --sx: ${(Math.random()-0.5) * 60}px;
-          --sy: ${(Math.random()-0.5) * 60 - 20}px;
-          background: ${color};
-          box-shadow: 0 0 6px ${color};
-        `;
-        document.body.appendChild(spark);
-        setTimeout(() => spark.remove(), 800);
-      }
-    }, 300);
-  },
-
-  pickSelected() {
-    if (this.selectedEggIndex === null) return null;
-    const eggIndex = this.selectedEggIndex;
     const idx = this.remainingEggs.indexOf(eggIndex);
-    if (idx === -1) return null;
-    this.remainingEggs.splice(idx, 1);
+    if (idx === -1) {
+      // 防御：如果保留蛋意外已被抽走，退回纯随机
+      eggIndex = this.remainingEggs[Math.floor(Math.random() * this.remainingEggs.length)];
+      const fallbackIdx = this.remainingEggs.indexOf(eggIndex);
+      this.remainingEggs.splice(fallbackIdx, 1);
+    } else {
+      this.remainingEggs.splice(idx, 1);
+    }
+
     const egg = CONFIG.eggs[eggIndex];
     this.crackedEggs.push(egg);
     this.currentEgg = egg;
     return { egg, index: eggIndex };
-  },
-
-  resetSelection() {
-    this.selectedEggIndex = null;
-    this.selectionLevel = 0;
-    this.clearSparks();
   }
 };
 
@@ -1116,14 +1057,6 @@ function renderEggs() {
       : '#444';
     eggEl.id = 'egg-' + originalIndex;
 
-    if (isAvailable) {
-      eggEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        GameState.selectEgg(originalIndex);
-        updateTapButton();
-      });
-    }
-
     const label = document.createElement('div');
     label.className = 'egg-label';
     label.textContent = isAvailable ? '🥚 彩蛋 #' + (displayPos + 1) : '💔 已开启';
@@ -1133,25 +1066,21 @@ function renderEggs() {
     grid.appendChild(wrapper);
   });
 
-  // 恢复选中状态
-  if (GameState.selectedEggIndex !== null && GameState.selectionLevel > 0) {
-    GameState.updateSelectionUI(GameState.selectedEggIndex);
-  }
-
   updateTapButton();
 }
 
 function updateTapButton() {
   const btn = document.getElementById('btnTap');
   const hint = document.getElementById('hintText');
-  if (GameState.selectedEggIndex !== null && GameState.selectionLevel > 0) {
-    btn.classList.add('has-selection');
-    btn.textContent = '💥 确认敲碎这个蛋！';
-    if (hint) hint.textContent = '已选中彩蛋 #' + (GameState.selectedEggIndex + 1) + '，点击上方按钮确认敲碎';
-  } else {
-    btn.classList.remove('has-selection');
+  const count = GameState.getRemainingCount();
+  if (count > 0) {
+    btn.disabled = false;
     btn.textContent = '✨ 像敲宝宝一样轻轻敲一下 ✨';
-    if (hint) hint.textContent = '先点击一个彩蛋选中它，然后按此按钮敲碎';
+    if (hint) hint.textContent = `还有 ${count} 个彩蛋，点击按钮随机敲碎一个`;
+  } else {
+    btn.textContent = '🎉 全部彩蛋已开启 🎉';
+    btn.disabled = true;
+    if (hint) hint.textContent = '';
   }
 }
 
@@ -1201,19 +1130,17 @@ function spawnParticles(x, y, color) {
 }
 
 // ============================================================
-// 主流程：敲碎选中的蛋
+// 主流程：随机敲碎一个蛋
 // ============================================================
 async function crackSelectedEgg() {
   if (GameState.isProcessing) return;
   if (GameState.getRemainingCount() === 0) return;
-  if (GameState.selectedEggIndex === null) return;
 
   GameState.isProcessing = true;
   const btn = document.getElementById('btnTap');
   btn.disabled = true;
-  GameState.clearSparks();
 
-  const result = GameState.pickSelected();
+  const result = GameState.pickRandom();
   if (!result) {
     GameState.isProcessing = false;
     btn.disabled = false;
@@ -1228,12 +1155,10 @@ async function crackSelectedEgg() {
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
-    eggEl.classList.remove('selected-l1', 'selected-l2', 'selected-l3', 'about-to-burst');
     eggEl.classList.add('breaking');
     spawnParticles(cx, cy, egg.color);
   }
 
-  GameState.resetSelection();
   await sleep(800);
   renderEggs();
 
